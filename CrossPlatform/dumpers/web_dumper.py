@@ -417,39 +417,43 @@ def extract_domain(url:str, subdomain:bool=True):
     return funny2
 
 
-def download_page(url:str):
+def download_page(url: str):
     console.print("Grabbing: " + url, style="cyan")
-    try:
-        res = session.get(url, timeout=10)
-    except:
-        return
-    #path = urlparse(url).path
-    path = url.split("://")[-1]
-    if path.endswith("/") or path == "":
-        path += "index.html"
-    if not "." in path.split("/")[-1]:
-        path += ".html"
+    res = session.get(url)
+
+    parsed = urlparse(url)
+    domain = parsed.netloc
+    path = parsed.path
+
+    if path == "" or path.endswith("/"):
+        path = os.path.join(path, "index.html")
+
+    elif not os.path.splitext(path)[1]:
+        path = path + ".html"
+
+    clean_path = path.lstrip("/")
+
     if formated:
-        ext = path.split("?")[0].split('.')[-1].lower()
         matched_folder = "others"
         for folder, extensions in types_to_files.items():
-            if ext in [e.lower() for e in extensions]:
+            if os.path.splitext(clean_path.split("?")[0])[1].lstrip(".").lower() in extensions:
                 matched_folder = folder
                 break
 
         output_thing = os.path.join(
             output,
-            extract_domain(path),
+            domain,
             matched_folder,
-            urlparse(url).path.lstrip("/")
+            clean_path
         )
     else:
-        output_thing = os.path.join(output, path.lstrip("/")).split("?")[0]
-
+        output_thing = os.path.join(output, domain, clean_path).split("?")[0]
 
     os.makedirs(os.path.dirname(output_thing), exist_ok=True)
+
     try:
         soup = BeautifulSoup(res.content, "html.parser")
+
         if soup.find_all("html") == []:
             if not os.path.exists(output_thing):
                 console.print("Downloading: " + output_thing, style="cyan")
@@ -459,6 +463,7 @@ def download_page(url:str):
             else:
                 console.print("Skipped (exists): " + output_thing, style="red")
         else:
+
             if skip_domain_check or extract_domain(url, False) == extract_domain(urlBase, False):
                 for tag in tags:
                     for mm in soup.find_all(tag):
@@ -466,9 +471,11 @@ def download_page(url:str):
                         href = mm.get("href")
                         if src:
                             gotten_urls.append(urljoin(url, src))
+                            console.print("Queueing: "+urljoin(url, src), style="cyan")
                         if href:
                             gotten_urls.append(urljoin(url, href))
-            
+                            console.print("Queueing: "+urljoin(url, href), style="cyan")
+
             if not os.path.exists(output_thing):
                 console.print("Downloading: " + output_thing, style="cyan")
                 with open(output_thing, "wb") as f:
@@ -476,14 +483,12 @@ def download_page(url:str):
                 console.print("Downloaded: " + output_thing, style="green")
             else:
                 console.print("Skipped (exists): " + output_thing, style="red")
-    except:
+
+    except Exception as e:
+        console.print("None HTML found: " + output_thing, style="cyan")
         if not os.path.exists(output_thing):
-            console.print("Downloading: " + output_thing, style="cyan")
             with open(output_thing, "wb") as f:
                 f.write(res.content)
-            console.print("Downloaded: " + output_thing, style="green")
-        else:
-            console.print("Skipped (exists): " + output_thing, style="red")
 
 download_page(urlBase)
 
