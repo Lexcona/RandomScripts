@@ -485,16 +485,15 @@ def download_page(url: str):
 
         if soup.find_all("html") != []:
             if skip_domain_check or extract_domain(url, False) == extract_domain(urlBase, False):
-                for tag in tags:
-                    for mm in soup.find_all(tag):
-                        src = mm.get("src")
-                        href = mm.get("href")
-                        if src:
-                            gotten_urls.append(urljoin(url, src))
-                            console.print("Queueing: "+urljoin(url, src), style="cyan")
-                        if href:
-                            gotten_urls.append(urljoin(url, href))
-                            console.print("Queueing: "+urljoin(url, href), style="cyan")
+                for mm in soup.find_all():
+                    src = mm.get("src")
+                    href = mm.get("href")
+                    if src:
+                        gotten_urls.append(urljoin(url, src))
+                        console.print("Queueing: "+urljoin(url, src), style="cyan")
+                    if href:
+                        gotten_urls.append(urljoin(url, href))
+                        console.print("Queueing: "+urljoin(url, href), style="cyan")
 
     except Exception as e:
         console.print("None HTML found: " + output_thing, style="cyan")
