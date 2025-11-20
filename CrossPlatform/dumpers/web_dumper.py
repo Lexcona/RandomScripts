@@ -13,6 +13,8 @@ from rich.console import Console
 parser = argparse.ArgumentParser()
 parser.add_argument("url")
 parser.add_argument("-o", "--output")
+parser.add_argument("-fi", "--filter")
+parser.add_argument("-e", "--exclude")
 parser.add_argument("-f", "--formated", action="store_true")
 parser.add_argument("-d", "--skip-domain-check", action="store_true")
 parser.add_argument("-t", "--threads", default=200)
@@ -407,7 +409,34 @@ if args.formated:
 else:
     formated = False
 
+if args.filter:
+    filterr = args.filter.replace(" ").split(",")
+else:
+    filterr = []
+
+if args.exclude:
+    exclude = args.exclude.replace(" ").split(",")
+else:
+    exclude = []
+
 skip_domain_check = args.skip_domain_check
+
+def download_thing(data, output:str):
+    if filterr != []:
+        if not output.split(".")[-1].replace("/", "") in filterr:
+            return
+    
+    if exclude != []:
+        if output.split(".")[-1].replace("/", "") in exclude:
+            return
+
+    if not os.path.exists(output):
+        console.print("Downloading: " + output, style="cyan")
+        with open(output, "wb") as f:
+            f.write(data)
+        console.print("Downloaded: " + output, style="green")
+    else:
+        console.print("Skipped (exists): " + output, style="red")
 
 def extract_domain(url:str, subdomain:bool=True):
     funny2 = url.split("://")[-1].split("/")[0]
@@ -454,16 +483,7 @@ def download_page(url: str):
     try:
         soup = BeautifulSoup(res.content, "html.parser")
 
-        if soup.find_all("html") == []:
-            if not os.path.exists(output_thing):
-                console.print("Downloading: " + output_thing, style="cyan")
-                with open(output_thing, "wb") as f:
-                    f.write(res.content)
-                console.print("Downloaded: " + output_thing, style="green")
-            else:
-                console.print("Skipped (exists): " + output_thing, style="red")
-        else:
-
+        if soup.find_all("html") != []:
             if skip_domain_check or extract_domain(url, False) == extract_domain(urlBase, False):
                 for tag in tags:
                     for mm in soup.find_all(tag):
@@ -476,19 +496,9 @@ def download_page(url: str):
                             gotten_urls.append(urljoin(url, href))
                             console.print("Queueing: "+urljoin(url, href), style="cyan")
 
-            if not os.path.exists(output_thing):
-                console.print("Downloading: " + output_thing, style="cyan")
-                with open(output_thing, "wb") as f:
-                    f.write(res.content)
-                console.print("Downloaded: " + output_thing, style="green")
-            else:
-                console.print("Skipped (exists): " + output_thing, style="red")
-
     except Exception as e:
         console.print("None HTML found: " + output_thing, style="cyan")
-        if not os.path.exists(output_thing):
-            with open(output_thing, "wb") as f:
-                f.write(res.content)
+    download_thing(res.content, output_thing)
 
 download_page(urlBase)
 
